@@ -1,0 +1,14 @@
+IsBadBuy
+
+Auction
+VehAge
+Transmission
+
+Make
+Model 
+Trim
+SubModel
+
+Color
+Transmission
+WheelTypeID

@@ -1,0 +1,10 @@
+WheelType = Null
+WheelTypeID = Null
+Color = Not available, Null
+Transmission=Blanks, NULL
+Nationality = Null, Others, Others Asian, Top Line Asian
+Size=NULL
+Top3AmericanName=NULL
+if MMRAcquisition=NULL, ALL NULL MMRCurrent=NULL
+PrimeUnit=NULL
+AUCGUAT = NULL
