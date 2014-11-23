@@ -10,11 +10,9 @@ remove_columns = ['RefId', 'PurchDate', 'VehYear', 'WheelTypeID', 'BYRNO', 'VNZI
 class_column = 'IsBadBuy'
 missing_values = ['NaN', '', 'NULL', 'NOT AVAILABLE', 'NOT AVAIL']
 
-nominal_cols = ['Auction', 'VehicleAge', 'Make', 'Model', 'Trim', 'SubModel', 'Color', 'Transmission', 'WheelType', 'Size', 'PRIMEUNIT', 'AUCGUART']
+nominal_cols = ['Auction', 'Make', 'Model', 'Trim', 'SubModel', 'Color', 'Transmission', 'WheelType', 'Size', 'PRIMEUNIT', 'AUCGUART']
 
-ignore_good_cols = ['VehicleAge']
-
-numerical_cols = ['VehOdo', 'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice', 'MMRAcquisitionRetailAveragePrice', 'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice', 'MMRCurrentRetailCleanPrice', 'WarrantyCost']
+numerical_cols = ['VehOdo',  'VehicleAge', 'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice', 'MMRAcquisitionRetailAveragePrice', 'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice', 'MMRCurrentRetailCleanPrice', 'WarrantyCost']
 
 nominal_maps = {}
 
@@ -89,8 +87,6 @@ def preprocess(data_file):
     imp = Imputer(missing_values=-1, strategy='most_frequent', axis=0, copy=True)
 
     for col in nominal_cols:
-        if col in ignore_good_cols:
-            continue
 
         unique_col_data = list(np.unique(classifier_data[col]))
 
@@ -100,15 +96,19 @@ def preprocess(data_file):
         unique_col_length = len(unique_col_data)
         print unique_col_length, unique_col_data
 
-        nominal_maps[col] = {}
+        nominal_maps[col] = [{}, 0, 0]
 
         unique_val = -1
         for unique_attr_val in ['NaN'] + unique_col_data:
-            nominal_maps[col][unique_attr_val] = unique_val
+            nominal_maps[col][0][unique_attr_val] = unique_val
             unique_val += 1
+
+        nominal_maps[col][1] = unique_val
+
         classifier_data[col] = classifier_data[col].replace(to_replace=['NaN'] + unique_col_data, value=range(-1, unique_col_length, 1))
 
-        replace_by_most_frequent(classifier_data[col])
+        most_frequent = replace_by_most_frequent(classifier_data[col])
+        nominal_maps[col][2] = most_frequent
 
 
     for col in numerical_cols:
@@ -118,6 +118,50 @@ def preprocess(data_file):
 
     #classifier_data.to_excel("x.xls")
     classifier_data.to_csv("x.csv", sep=',')
+
+
+def convertTestNominalData(tdata, col, missing_value='NaN'):
+    for i in range(0, len(tdata)):
+        # if tdata[i] == missing_value:
+        #     tdata[i] = nominal_maps[col][2]
+        #     continue
+        if tdata[i] in nominal_maps[col][0]:
+            tdata[i] = nominal_maps[col][0][tdata[i]]
+        else:
+            nominal_maps[col][0][tdata[i]] = nominal_maps[col][1]
+            tdata[i] = nominal_maps[col][1]
+            nominal_maps[col][1] += 1
+
+def convertTest(test_file):
+    test_data = pd.read_csv(test_file, keep_default_na=False)
+
+    for mv in missing_values:
+        test_data.replace(mv, 'NaN', inplace=True)
+
+    columns = list(test_data.columns.values)
+    print columns
+
+    for column in columns:
+        if column in remove_columns or column == class_column:
+            test_data.drop(column, axis=1, inplace=True)
+
+
+    num_attributes = len(test_data.columns)
+    print "After removing redundant attributes = ", num_attributes
+
+    for col in nominal_cols:
+        convertTestNominalData(test_data[col], col)
+        most_frequent = replace_by_most_frequent(test_data[col])
+
+    for col in numerical_cols:
+        test_data[col].replace('NaN', -1, inplace=True)
+        #print classifier_data[col]
+        replace_by_mean(test_data[col])
+
+
+    test_data.to_csv("y.csv", sep=',')
+
+
 
 if __name__=="__main__":
     preprocess("training.csv")
