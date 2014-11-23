@@ -3,6 +3,10 @@ __author__ = 'manshu'
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import Imputer
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.cross_validation import cross_val_score
 from pandas import DataFrame
 
 
@@ -72,9 +76,11 @@ def preprocess(data_file):
 
 
     class_data = classifier_data[class_column]
+    for i in range(0, len(class_data)):
+        class_data[i] = int(class_data[i])
 
     for column in columns:
-        if column in remove_columns or column == class_column:
+        if column in remove_columns:# or column == class_column:
             classifier_data.drop(column, axis=1, inplace=True)
 
 
@@ -118,6 +124,11 @@ def preprocess(data_file):
 
     #classifier_data.to_excel("x.xls")
     classifier_data.to_csv("x.csv", sep=',')
+
+    # gnb = GaussianNB()
+    # y_pred = gnb.fit(classifier_data, class_data).predict(class_data)
+    #
+    # print (class_data != y_pred).sum()
 
 
 def convertTestNominalData(tdata, col, missing_value='NaN'):
