@@ -8,16 +8,28 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.cross_validation import cross_val_score
 from pandas import DataFrame
+from pandas import Series
+import math
 
+remove_columns = ['RefId', 'PurchDate', 'VehYear', 'Trim', 'SubModel', 'WheelTypeID', 'BYRNO', 'VNZIP1',
+                  'TopThreeAmericanName', 'Nationality', 'IsOnlineSale', 'PRIMEUNIT', 'Transmission', 'AUCGUART']
 
-remove_columns = ['RefId', 'PurchDate', 'VehYear', 'WheelTypeID', 'BYRNO', 'VNZIP1', 'VNST', 'TopThreeAmericanName', 'Nationality', 'IsOnlineSale', 'PRIMEUNIT', 'Transmission', 'AUCGUART']
 class_column = 'IsBadBuy'
 missing_values = ['NaN', '', 'NULL', 'NOT AVAILABLE', 'NOT AVAIL']
 
-nominal_cols = ['Auction', 'Make', 'Model', 'Trim', 'SubModel', 'Color', 'WheelType', 'Size']
+nominal_cols = ['Auction', 'Make', 'Model', 'Color', 'WheelType', 'VNST', 'Size']
 
-numerical_cols = ['VehOdo',  'VehicleAge', 'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice', 'MMRAcquisitionRetailAveragePrice', 'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice', 'MMRCurrentRetailCleanPrice', 'VehBCost', 'WarrantyCost']
-
+numerical_cols = ['VehOdo',  'VehicleAge', 'VehBCost', 'WarrantyCost', 'MMRCurrentAuctionCleanPrice',
+                  'MMRCurrentRetailAveragePrice', 'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice',
+                  'MMRAcquisitionRetailAveragePrice', 'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentRetailCleanPrice']
+#
+#create_new_attribute = []
+create_new_attribute = [
+    [['MMRAcquisitionRetailAveragePrice', 'MMRAcquisitionAuctionAveragePrice'], 'ProfitAcquisitionAverage'],
+    [['MMRAcquisitonRetailCleanPrice', 'MMRAcquisitionAuctionCleanPrice'], 'ProfitAcquisitionClean'],
+    [['MMRCurrentRetailAveragePrice', 'MMRCurrentAuctionAveragePrice'], 'ProfitCurrentAverage'],
+    [['MMRCurrentRetailCleanPrice', 'MMRCurrentAuctionCleanPrice'], 'ProfitCurrentClean']
+]
 nominal_maps = {}
 
 #neglect_cols = [0, 2, 5, 12, 28, 29, 30, 31, 6, 16, 13, 17, 15, 11, 32, 26, 27];
@@ -51,28 +63,39 @@ def replace_by_mean_and_normalize(cdata, missing_value=0):
     sum_data = 0
     mean_count = 0
     for i in range(0, len(cdata)):
-        cdata[i] = float(cdata[i])
-        data = cdata[i]
+        #cdata[i] = float(cdata[i])
+        cdata[i] = int(cdata[i])
+        data = int(cdata[i])
         if data != missing_value:
             sum_data += data
             mean_count += 1
 
     mean = sum_data / mean_count
 
+    new_max = 0.0
+    new_min = 0.0
     new_mean = 0.0
     for i in range(0, len(cdata)):
         if cdata[i] == missing_value:
-            cdata[i] = mean
-        new_mean += cdata[i]
-
-    std = 0.0
-    for i in range(0, len(cdata)):
-        std += (cdata[i] - new_mean) * (cdata[i] - new_mean)
-
-    std /= 1.0 * len(cdata)
-
-    for i in range(0, len(cdata)):
-        cdata[i] = (cdata[i] - new_mean) / std
+            cdata[i] = int(mean)
+        else:
+            cdata[i] = int(cdata[i])
+    #     if cdata[i] < new_min:
+    #         new_min = cdata[i]
+    #     if cdata[i] > new_max:
+    #         new_max = cdata[i]
+    #     new_mean += cdata[i]
+    # #
+    # for i in range(0, len(cdata)):
+    #     cdata[i] = (cdata[i] - new_min) / (new_max - new_min)
+    # std = 0.0
+    # for i in range(0, len(cdata)):
+    #     std += (cdata[i] - new_mean) * (cdata[i] - new_mean)
+    #
+    # std /= 1.0 * len(cdata)
+    #
+    # for i in range(0, len(cdata)):
+    #     cdata[i] = (cdata[i] - new_mean) / std
 
     return mean
 
@@ -134,6 +157,15 @@ def preprocess(data_file):
         #print classifier_data[col]
         replace_by_mean_and_normalize(classifier_data[col])
 
+    for i in range(0, len(create_new_attribute)):
+        row = create_new_attribute[i]
+        classifier_data[row[1]] = Series(np.random.randn(len(classifier_data[row[0][0]])), index=classifier_data.index)
+        for j in range(0, len(classifier_data[row[0][0]])):
+            classifier_data[row[1]][j] = classifier_data[row[0][0]][j] - classifier_data[row[0][1]][j]
+
+        #classifier_data.drop(row[0][0], axis=1, inplace=True)
+        #classifier_data.drop(row[0][1], axis=1, inplace=True)
+
     #classifier_data.to_excel("x.xls")
     classifier_data.to_csv("x.csv", sep=',')
 
@@ -179,6 +211,14 @@ def convertTest(test_file, est=None):
         #print classifier_data[col]
         replace_by_mean_and_normalize(test_data[col])
 
+    for i in range(0, len(create_new_attribute)):
+        row = create_new_attribute[i]
+        test_data[row[1]] = Series(np.random.randn(len(test_data[row[0][0]])), index=test_data.index)
+        for j in range(0, len(test_data[row[0][0]])):
+            test_data[row[1]][j] = test_data[row[0][0]][j] - test_data[row[0][1]][j]
+
+        #test_data.drop(row[0][0], axis=1, inplace=True)
+        #test_data.drop(row[0][1], axis=1, inplace=True)
 
     test_data.to_csv("y.csv", sep=',')
 

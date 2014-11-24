@@ -4,7 +4,11 @@ import sys
 import math
 import csv
 
-numerical_cols = ['VehOdo',  'VehicleAge', 'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice', 'MMRAcquisitionRetailAveragePrice', 'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice', 'MMRCurrentRetailCleanPrice', 'VehBCost', 'WarrantyCost']
+numerical_cols = ['VehOdo',  'VehicleAge',   'VehBCost', 'WarrantyCost',
+                  'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice', 'MMRAcquisitionRetailAveragePrice',
+                  'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice', 'MMRCurrentRetailCleanPrice',
+                  'ProfitAcquisitionAverage', 'ProfitAcquisitionClean', 'ProfitCurrentAverage', 'ProfitCurrentClean']
+
 numerical_cols_id = []
 
 def readFile(file):
@@ -23,13 +27,20 @@ def readFile(file):
             data_tuple = row[1:]
             for i in range(0, len(data_tuple)):
                 attr_val = data_tuple[i]
-                classifier_data[-1][i] = int(math.ceil(float(attr_val)))
+                classifier_data[-1][i] = attr_val #int(math.ceil(float(attr_val)))
 
     if numerical_cols_id == []:
         for i in range(0, len(features)):
             feature = features[i]
             if feature in numerical_cols:
                 numerical_cols_id.append(i)
+
+    for row in classifier_data:
+        for attr in row:
+            if attr in numerical_cols_id:
+                row[attr] = int(math.ceil(float(row[attr])))
+            else:
+                row[attr] = int(row[attr])
 
     print features
     print numerical_cols_id
@@ -92,6 +103,8 @@ def guassianProbability(guassian_attr_val_class, attr, xk, Ci):
     mean = guassian_attr_val_class[attr][Ci][0]
     std = guassian_attr_val_class[attr][Ci][1]
 
+    if std == 0.0:
+        std = 1.0
     gxus *= 1.0 / std
     epow = math.e ** (-1 * ((xk - mean) * (xk - mean)) / (2 * std * std))
 
