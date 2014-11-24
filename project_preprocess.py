@@ -10,13 +10,13 @@ from sklearn.cross_validation import cross_val_score
 from pandas import DataFrame
 
 
-remove_columns = ['RefId', 'PurchDate', 'VehYear', 'WheelTypeID', 'BYRNO', 'VNZIP1', 'VNST', 'VehBCost', 'TopThreeAmericanName', 'Nationality', 'IsOnlineSale']
+remove_columns = ['RefId', 'PurchDate', 'VehYear', 'WheelTypeID', 'BYRNO', 'VNZIP1', 'VNST', 'TopThreeAmericanName', 'Nationality', 'IsOnlineSale', 'PRIMEUNIT', 'Transmission', 'AUCGUART']
 class_column = 'IsBadBuy'
 missing_values = ['NaN', '', 'NULL', 'NOT AVAILABLE', 'NOT AVAIL']
 
-nominal_cols = ['Auction', 'Make', 'Model', 'Trim', 'SubModel', 'Color', 'Transmission', 'WheelType', 'Size', 'PRIMEUNIT', 'AUCGUART']
+nominal_cols = ['Auction', 'Make', 'Model', 'Trim', 'SubModel', 'Color', 'WheelType', 'Size']
 
-numerical_cols = ['VehOdo',  'VehicleAge', 'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice', 'MMRAcquisitionRetailAveragePrice', 'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice', 'MMRCurrentRetailCleanPrice', 'WarrantyCost']
+numerical_cols = ['VehOdo',  'VehicleAge', 'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice', 'MMRAcquisitionRetailAveragePrice', 'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice', 'MMRCurrentRetailCleanPrice', 'VehBCost', 'WarrantyCost']
 
 nominal_maps = {}
 
@@ -24,7 +24,7 @@ nominal_maps = {}
 #bad_nominal_cols = [3, 4, 6, 7, 8, 9, 10, 11, 13, 15, 16, 17, 26, 27, 32]
 #bad_numerical_cols = [14, 18, 19, 20, 21, 22, 23, 24, 25, 33]
 
-def replace_by_most_frequent(cdata, missing_value=-1):
+def replace_by_most_frequent(cdata, missing_value=0):
     data_count = {}
     for data in cdata:
         if data == missing_value:
@@ -41,26 +41,38 @@ def replace_by_most_frequent(cdata, missing_value=-1):
             most_freq_key = key
             break
 
-    for i in range(0, len(cdata)):
-        if cdata[i] == missing_value:
-            cdata[i] = most_freq_key
+    # for i in range(0, len(cdata)):
+    #     if cdata[i] == missing_value:
+    #         cdata[i] = most_freq_key
 
     return most_freq_key
 
-def replace_by_mean(cdata, missing_value=-1):
+def replace_by_mean_and_normalize(cdata, missing_value=0):
     sum_data = 0
     mean_count = 0
     for i in range(0, len(cdata)):
-        data = int(cdata[i])
+        cdata[i] = float(cdata[i])
+        data = cdata[i]
         if data != missing_value:
             sum_data += data
             mean_count += 1
 
     mean = sum_data / mean_count
 
+    new_mean = 0.0
     for i in range(0, len(cdata)):
         if cdata[i] == missing_value:
             cdata[i] = mean
+        new_mean += cdata[i]
+
+    std = 0.0
+    for i in range(0, len(cdata)):
+        std += (cdata[i] - new_mean) * (cdata[i] - new_mean)
+
+    std /= 1.0 * len(cdata)
+
+    for i in range(0, len(cdata)):
+        cdata[i] = (cdata[i] - new_mean) / std
 
     return mean
 
@@ -104,32 +116,28 @@ def preprocess(data_file):
 
         nominal_maps[col] = [{}, 0, 0]
 
-        unique_val = -1
+        unique_val = 0
         for unique_attr_val in ['NaN'] + unique_col_data:
             nominal_maps[col][0][unique_attr_val] = unique_val
             unique_val += 1
 
         nominal_maps[col][1] = unique_val
 
-        classifier_data[col] = classifier_data[col].replace(to_replace=['NaN'] + unique_col_data, value=range(-1, unique_col_length, 1))
+        classifier_data[col] = classifier_data[col].replace(to_replace=['NaN'] + unique_col_data, value=range(0, unique_col_length + 1))
 
-        most_frequent = replace_by_most_frequent(classifier_data[col])
-        nominal_maps[col][2] = most_frequent
+        #most_frequent = replace_by_most_frequent(classifier_data[col])
+        #nominal_maps[col][2] = most_frequent
 
 
     for col in numerical_cols:
-        classifier_data[col].replace('NaN', -1, inplace=True)
+        classifier_data[col].replace('NaN', 0, inplace=True)
         #print classifier_data[col]
-        replace_by_mean(classifier_data[col])
+        replace_by_mean_and_normalize(classifier_data[col])
 
     #classifier_data.to_excel("x.xls")
     classifier_data.to_csv("x.csv", sep=',')
 
-    # gnb = GaussianNB()
-    # y_pred = gnb.fit(classifier_data, class_data).predict(class_data)
-    #
-    # print (class_data != y_pred).sum()
-
+    classifier_data.drop(class_column, axis=1, inplace=True)
 
 def convertTestNominalData(tdata, col, missing_value='NaN'):
     for i in range(0, len(tdata)):
@@ -143,36 +151,36 @@ def convertTestNominalData(tdata, col, missing_value='NaN'):
             tdata[i] = nominal_maps[col][1]
             nominal_maps[col][1] += 1
 
-def convertTest(test_file):
+def convertTest(test_file, est=None):
     test_data = pd.read_csv(test_file, keep_default_na=False)
 
     for mv in missing_values:
         test_data.replace(mv, 'NaN', inplace=True)
 
     columns = list(test_data.columns.values)
-    print columns
+    #print columns
 
     for column in columns:
+        if column == "RefId":
+            continue
         if column in remove_columns or column == class_column:
             test_data.drop(column, axis=1, inplace=True)
 
 
     num_attributes = len(test_data.columns)
-    print "After removing redundant attributes = ", num_attributes
+    #print "After removing redundant attributes = ", num_attributes
 
     for col in nominal_cols:
         convertTestNominalData(test_data[col], col)
-        most_frequent = replace_by_most_frequent(test_data[col])
+        #most_frequent = replace_by_most_frequent(test_data[col])
 
     for col in numerical_cols:
-        test_data[col].replace('NaN', -1, inplace=True)
+        test_data[col].replace('NaN', 0, inplace=True)
         #print classifier_data[col]
-        replace_by_mean(test_data[col])
+        replace_by_mean_and_normalize(test_data[col])
 
 
     test_data.to_csv("y.csv", sep=',')
-
-
 
 if __name__=="__main__":
     preprocess("training.csv")
