@@ -11,14 +11,14 @@ from pandas import DataFrame
 from pandas import Series
 import math
 
-remove_columns = ['RefId', 'VehYear', 'Trim',
+remove_columns = ['RefId', 'VehYear',
                   'Nationality', 'Transmission', 'TopThreeAmericanName']
 
 class_column = 'IsBadBuy'
 missing_values = ['NaN', '', 'NULL', 'NOT AVAILABLE', 'NOT AVAIL']
 
 other_cols = ['WheelTypeID', 'BYRNO', 'IsOnlineSale', 'VNZIP1']
-nominal_cols = ['Auction', 'PurchDate', 'Make', 'Model', 'SubModel', 'Color', 'WheelType', 'VNST', 'Size', 'PRIMEUNIT', 'AUCGUART'] + other_cols
+nominal_cols = ['Auction', 'PurchDate', 'Make', 'Trim', 'Model', 'SubModel', 'Color', 'WheelType', 'VNST', 'Size', 'PRIMEUNIT', 'AUCGUART'] + other_cols
 
 replicate_cols = {'WheelType': 3, 'VehBCost': 3, 'BYRNO': 1, 'VehOdo': 1, 'VehicleAge': 1, 'PRIMEUNIT': 1}#, 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice']
 #replica_factor = [3, 3, 1, 1, 1, 1, 1, 1, 1, 1]
