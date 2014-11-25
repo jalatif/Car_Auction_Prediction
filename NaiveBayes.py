@@ -4,10 +4,10 @@ import sys
 import math
 import csv
 
-numerical_cols = ['VehOdo',  'VehicleAge',   'VehBCost', 'WarrantyCost',
+numerical_cols = ['VehOdo',  'VehicleAge', 'VehBCost', 'WarrantyCost',
                   'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice', 'MMRAcquisitionRetailAveragePrice',
                   'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice', 'MMRCurrentRetailCleanPrice',
-                  'ProfitAcquisitionAverage', 'ProfitAcquisitionClean', 'ProfitCurrentAverage', 'ProfitCurrentClean']
+                  'ProfitAcquisitionAverage', 'ProfitAcquisitionClean', 'ProfitCurrentAverage', 'ProfitCurrentClean', 'AverageProfit', 'CleanProfit']
 
 numerical_cols_id = []
 
@@ -32,15 +32,19 @@ def readFile(file):
     if numerical_cols_id == []:
         for i in range(0, len(features)):
             feature = features[i]
-            if feature in numerical_cols:
-                numerical_cols_id.append(i)
+            for col_name in numerical_cols:
+                if feature.startswith(col_name) or col_name == feature:
+                    numerical_cols_id.append(i)
 
     for row in classifier_data:
         for attr in row:
             if attr in numerical_cols_id:
                 row[attr] = int(math.ceil(float(row[attr])))
             else:
-                row[attr] = int(row[attr])
+                try:
+                    row[attr] = int(row[attr])
+                except:
+                    row[attr] = int(math.ceil(float(row[attr])))
 
     print features
     print numerical_cols_id

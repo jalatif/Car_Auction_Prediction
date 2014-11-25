@@ -11,15 +11,19 @@ from pandas import DataFrame
 from pandas import Series
 import math
 
-remove_columns = ['RefId', 'PurchDate', 'VehYear', 'Trim', 'SubModel', 'WheelTypeID', 'BYRNO', 'VNZIP1',
-                  'TopThreeAmericanName', 'Nationality', 'IsOnlineSale', 'PRIMEUNIT', 'Transmission', 'AUCGUART']
+remove_columns = ['RefId', 'VehYear', 'Trim',
+                  'Nationality', 'Transmission', 'TopThreeAmericanName']
 
 class_column = 'IsBadBuy'
 missing_values = ['NaN', '', 'NULL', 'NOT AVAILABLE', 'NOT AVAIL']
 
-nominal_cols = ['Auction', 'Make', 'Model', 'Color', 'WheelType', 'VNST', 'Size']
+other_cols = ['WheelTypeID', 'BYRNO', 'IsOnlineSale', 'VNZIP1']
+nominal_cols = ['Auction', 'PurchDate', 'Make', 'Model', 'SubModel', 'Color', 'WheelType', 'VNST', 'Size', 'PRIMEUNIT', 'AUCGUART'] + other_cols
 
-numerical_cols = ['VehOdo',  'VehicleAge', 'VehBCost', 'WarrantyCost', 'MMRCurrentAuctionCleanPrice',
+replicate_cols = {'WheelType': 3, 'VehBCost': 3, 'BYRNO': 1, 'VehOdo': 1, 'VehicleAge': 1, 'PRIMEUNIT': 1}#, 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice']
+#replica_factor = [3, 3, 1, 1, 1, 1, 1, 1, 1, 1]
+
+numerical_cols = ['VehOdo', 'VehicleAge', 'VehBCost', 'WarrantyCost', 'MMRCurrentAuctionCleanPrice',
                   'MMRCurrentRetailAveragePrice', 'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice',
                   'MMRAcquisitionRetailAveragePrice', 'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentRetailCleanPrice']
 #
@@ -28,7 +32,10 @@ create_new_attribute = [
     [['MMRAcquisitionRetailAveragePrice', 'MMRAcquisitionAuctionAveragePrice'], 'ProfitAcquisitionAverage'],
     [['MMRAcquisitonRetailCleanPrice', 'MMRAcquisitionAuctionCleanPrice'], 'ProfitAcquisitionClean'],
     [['MMRCurrentRetailAveragePrice', 'MMRCurrentAuctionAveragePrice'], 'ProfitCurrentAverage'],
-    [['MMRCurrentRetailCleanPrice', 'MMRCurrentAuctionCleanPrice'], 'ProfitCurrentClean']
+    [['MMRCurrentRetailCleanPrice', 'MMRCurrentAuctionCleanPrice'], 'ProfitCurrentClean'],
+    [['ProfitAcquisitionAverage', 'ProfitCurrentAverage'], 'AverageProfit'],
+    [['ProfitAcquisitionClean', 'ProfitCurrentClean'], 'CleanProfit']
+
 ]
 nominal_maps = {}
 
@@ -146,8 +153,10 @@ def preprocess(data_file):
 
         nominal_maps[col][1] = unique_val
 
-        classifier_data[col] = classifier_data[col].replace(to_replace=['NaN'] + unique_col_data, value=range(0, unique_col_length + 1))
-
+        if col not in other_cols:
+            classifier_data[col] = classifier_data[col].replace(to_replace=['NaN'] + unique_col_data, value=range(0, unique_col_length + 1))
+        else:
+            classifier_data[col].replace('NaN', 0, inplace=True)
         #most_frequent = replace_by_most_frequent(classifier_data[col])
         #nominal_maps[col][2] = most_frequent
 
@@ -162,6 +171,14 @@ def preprocess(data_file):
         classifier_data[row[1]] = Series(np.random.randn(len(classifier_data[row[0][0]])), index=classifier_data.index)
         for j in range(0, len(classifier_data[row[0][0]])):
             classifier_data[row[1]][j] = classifier_data[row[0][0]][j] - classifier_data[row[0][1]][j]
+
+    for col_name in replicate_cols:
+        #col_name = replicate_cols[i]
+        for j in range(0, replicate_cols[col_name]):
+            new_col = col_name + str(j)
+            classifier_data[new_col] = Series(np.random.randn(len(classifier_data[col_name])), index=classifier_data.index)
+            for k in range(0, len(classifier_data[col_name])):
+                classifier_data[new_col][k] = classifier_data[col_name][k]
 
         #classifier_data.drop(row[0][0], axis=1, inplace=True)
         #classifier_data.drop(row[0][1], axis=1, inplace=True)
@@ -219,6 +236,14 @@ def convertTest(test_file, est=None):
 
         #test_data.drop(row[0][0], axis=1, inplace=True)
         #test_data.drop(row[0][1], axis=1, inplace=True)
+
+    for col_name in replicate_cols:#range(0, len(replicate_cols)):
+        #col_name = replicate_cols[i]
+        for j in range(0, replicate_cols[col_name]):
+            new_col = col_name + str(j)
+            test_data[new_col] = Series(np.random.randn(len(test_data[col_name])), index=test_data.index)
+            for k in range(0, len(test_data[new_col])):
+                test_data[new_col][k] = test_data[col_name][k]
 
     test_data.to_csv("y.csv", sep=',')
 
