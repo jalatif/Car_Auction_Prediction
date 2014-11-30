@@ -7,7 +7,7 @@ import csv
 numerical_cols = ['VehOdo',  'VehicleAge', 'VehBCost', 'WarrantyCost',
                   'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice', 'MMRAcquisitionRetailAveragePrice',
                   'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice', 'MMRCurrentRetailCleanPrice',
-                  'ProfitAcquisitionAverage', 'ProfitAcquisitionClean', 'ProfitCurrentAverage', 'ProfitCurrentClean', 'AverageProfit', 'CleanProfit']
+                  'ProfitAcquisitionAverage', 'ProfitAcquisitionClean', 'ProfitCurrentAverage', 'ProfitCurrentClean', 'AverageProfit', 'CleanProfit', 'OdoPAge']
 
 numerical_cols_id = []
 

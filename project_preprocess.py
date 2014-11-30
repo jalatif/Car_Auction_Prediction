@@ -17,24 +17,25 @@ remove_columns = ['RefId', 'VehYear',
 class_column = 'IsBadBuy'
 missing_values = ['NaN', '', 'NULL', 'NOT AVAILABLE', 'NOT AVAIL']
 
-other_cols = ['WheelTypeID', 'BYRNO', 'IsOnlineSale', 'VNZIP1']
+other_cols = ['WheelTypeID', 'IsOnlineSale', 'BYRNO', 'VNZIP1']
 nominal_cols = ['Auction', 'PurchDate', 'Make', 'Trim', 'Model', 'SubModel', 'Color', 'WheelType', 'VNST', 'Size', 'PRIMEUNIT', 'AUCGUART'] + other_cols
 
-replicate_cols = {'WheelType': 3, 'VehBCost': 3, 'BYRNO': 1, 'VehOdo': 1, 'VehicleAge': 1, 'PRIMEUNIT': 1}#, 'MMRCurrentAuctionCleanPrice', 'MMRCurrentRetailAveragePrice']
+replicate_cols = {'WheelType': 3, 'VehBCost': 3, 'VehOdo': 1, 'BYRNO': 1, 'VehicleAge': 1, 'PRIMEUNIT': 1}#, 'MMRCurrentAuctionCleanPrice': 1, 'MMRCurrentRetailAveragePrice': 1}
 #replica_factor = [3, 3, 1, 1, 1, 1, 1, 1, 1, 1]
 
 numerical_cols = ['VehOdo', 'VehicleAge', 'VehBCost', 'WarrantyCost', 'MMRCurrentAuctionCleanPrice',
                   'MMRCurrentRetailAveragePrice', 'MMRAcquisitionAuctionAveragePrice', 'MMRAcquisitionAuctionCleanPrice',
                   'MMRAcquisitionRetailAveragePrice', 'MMRAcquisitonRetailCleanPrice', 'MMRCurrentAuctionAveragePrice', 'MMRCurrentRetailCleanPrice']
-#
+
 #create_new_attribute = []
 create_new_attribute = [
-    [['MMRAcquisitionRetailAveragePrice', 'MMRAcquisitionAuctionAveragePrice'], 'ProfitAcquisitionAverage'],
-    [['MMRAcquisitonRetailCleanPrice', 'MMRAcquisitionAuctionCleanPrice'], 'ProfitAcquisitionClean'],
-    [['MMRCurrentRetailAveragePrice', 'MMRCurrentAuctionAveragePrice'], 'ProfitCurrentAverage'],
-    [['MMRCurrentRetailCleanPrice', 'MMRCurrentAuctionCleanPrice'], 'ProfitCurrentClean'],
-    [['ProfitAcquisitionAverage', 'ProfitCurrentAverage'], 'AverageProfit'],
-    [['ProfitAcquisitionClean', 'ProfitCurrentClean'], 'CleanProfit']
+    [['MMRAcquisitionRetailAveragePrice', 'MMRAcquisitionAuctionAveragePrice'], 'ProfitAcquisitionAverage', lambda x,y: x - y],
+    [['MMRAcquisitonRetailCleanPrice', 'MMRAcquisitionAuctionCleanPrice'], 'ProfitAcquisitionClean', lambda x,y: x - y],
+    [['MMRCurrentRetailAveragePrice', 'MMRCurrentAuctionAveragePrice'], 'ProfitCurrentAverage', lambda x,y: x - y],
+    [['MMRCurrentRetailCleanPrice', 'MMRCurrentAuctionCleanPrice'], 'ProfitCurrentClean', lambda x,y: x - y],
+    [['ProfitAcquisitionAverage', 'ProfitCurrentAverage'], 'AverageProfit', lambda x,y: x - y],
+    [['ProfitAcquisitionClean', 'ProfitCurrentClean'], 'CleanProfit', lambda x,y: x - y],
+    [['VehOdo', 'VehicleAge'], 'OdoPAge', lambda x,y: x/(1.0 * y)]
 
 ]
 nominal_maps = {}
@@ -157,6 +158,9 @@ def preprocess(data_file):
             classifier_data[col] = classifier_data[col].replace(to_replace=['NaN'] + unique_col_data, value=range(0, unique_col_length + 1))
         else:
             classifier_data[col].replace('NaN', 0, inplace=True)
+            #del nominal_maps[col][0]['NaN']
+            #nominal_maps[col][0][-1] = 0
+            #classifier_data[col] = classifier_data[col].replace(to_replace=[-1] + unique_col_data, value=range(0, unique_col_length + 1))
         #most_frequent = replace_by_most_frequent(classifier_data[col])
         #nominal_maps[col][2] = most_frequent
 
@@ -169,8 +173,9 @@ def preprocess(data_file):
     for i in range(0, len(create_new_attribute)):
         row = create_new_attribute[i]
         classifier_data[row[1]] = Series(np.random.randn(len(classifier_data[row[0][0]])), index=classifier_data.index)
+        fx = row[2]
         for j in range(0, len(classifier_data[row[0][0]])):
-            classifier_data[row[1]][j] = classifier_data[row[0][0]][j] - classifier_data[row[0][1]][j]
+            classifier_data[row[1]][j] = fx(classifier_data[row[0][0]][j], classifier_data[row[0][1]][j])
 
     for col_name in replicate_cols:
         #col_name = replicate_cols[i]
@@ -220,7 +225,11 @@ def convertTest(test_file, est=None):
     #print "After removing redundant attributes = ", num_attributes
 
     for col in nominal_cols:
-        convertTestNominalData(test_data[col], col)
+        if col not in other_cols:
+            convertTestNominalData(test_data[col], col)
+        else:
+            test_data[col].replace('NaN', 0, inplace=True)
+            #convertTestNominalData(test_data[col], col, -1)
         #most_frequent = replace_by_most_frequent(test_data[col])
 
     for col in numerical_cols:
@@ -231,8 +240,9 @@ def convertTest(test_file, est=None):
     for i in range(0, len(create_new_attribute)):
         row = create_new_attribute[i]
         test_data[row[1]] = Series(np.random.randn(len(test_data[row[0][0]])), index=test_data.index)
+        fx = row[2]
         for j in range(0, len(test_data[row[0][0]])):
-            test_data[row[1]][j] = test_data[row[0][0]][j] - test_data[row[0][1]][j]
+            test_data[row[1]][j] = fx(test_data[row[0][0]][j], test_data[row[0][1]][j])
 
         #test_data.drop(row[0][0], axis=1, inplace=True)
         #test_data.drop(row[0][1], axis=1, inplace=True)
