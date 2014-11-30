@@ -96,6 +96,16 @@ def preprocess(X):
 
     return X
 
+def getAccuracy(predictions, Y):
+
+    M = Y.size
+    sum_val = 0
+    for i in range(0, M):
+        if predictions[i] == Y[i]:
+            sum_val += 1
+    accuracy = sum_val / (1.0 * M)
+    return accuracy
+
 def logistic_regression(X, Y, features):
 
     #X, Y = readFile("lr_t1.txt")
@@ -122,7 +132,7 @@ def logistic_regression(X, Y, features):
     for i in range(0, N + 1):
         theta_param[i] = random.random()
 
-    #theta_param = np.array([[ 0.79614327], [ 0.64151511], [ 0.76398154], [ 0.36273963], [ 0.32608115], [ 0.37254119], [ 0.03952807], [ 0.10979644], [ 0.82724346], [ 0.3982566 ], [ 0.75496772], [ 0.20258409], [ 0.35894928], [ 0.33887323], [ 0.65930873], [ 0.48777835], [ 0.89330239], [ 0.80053253], [ 0.34298245], [ 0.20129628]])
+    theta_param = np.array([[ 0.79614327], [ 0.64151511], [ 0.76398154], [ 0.36273963], [ 0.32608115], [ 0.37254119], [ 0.03952807], [ 0.10979644], [ 0.82724346], [ 0.3982566 ], [ 0.75496772], [ 0.20258409], [ 0.35894928], [ 0.33887323], [ 0.65930873], [ 0.48777835], [ 0.89330239], [ 0.80053253], [ 0.34298245], [ 0.20129628]])
 
     # theta_param = np.array([[ 0.67605752], [ 0.55168346], [ 0.27144959], [ 0.73673547], [ 0.15480109], [ 0.97850866], [ 0.44643256], [ 0.68159934], [ 0.89509255], [ 0.98479877],
     #                [ 0.4428826 ], [ 0.76526354], [ 0.42932508], [ 0.6934041 ], [ 0.34877231], [ 0.03783622], [ 0.19395029], [ 0.80813425], [ 0.27508955], [ 0.10439405]]) #0.05031 #0.02 100
@@ -177,13 +187,10 @@ def logistic_regression(X, Y, features):
 
     hypothesis, predictions = predict(X, theta_param)
 
-    sum_val = 0
-    for i in range(0, M):
-        if predictions[i] == Y[i]:
-            sum_val += 1
-    print "Accuracy = ", sum_val / (1.0 * M)
+    accuracy = getAccuracy(predictions, Y)
+    print "Accuracy = ", accuracy
 
-    return theta_param
+    return theta_param, accuracy
     # X1, Y1 = readFile("lr_t2.txt")
     # X1 = np.array(X1)
     # Y1 = np.matrix(Y1).T
@@ -229,7 +236,48 @@ def read_csv_file(file):
 
 if __name__ == "__main__":
     X, Y, features = read_csv_file("x.csv")#("training_equal_freq.csv")
-    theta_params = logistic_regression(X, Y, features)
+    M, N = np.shape(X)
+
+    num_training = int(0.6 * M)
+    print num_training
+    X_training = X[:num_training]
+    Y_training = Y[:num_training]
+
+    X_CV = X[num_training:]
+    Y_CV = Y[num_training:]
+
+    X_CV = np.array(X_CV)
+    X_CV = preprocess(X_CV)
+    Y_CV = np.matrix(Y_CV).T
+
+    accuracy_CV = 0.0
+
+    max_theta_params = []
+    max_accuracy = []
+    max_run = 5
+    run_id = 0
+
+    while run_id < max_run:
+        theta_params, accuracy_tr = logistic_regression(X_training, Y_training, features)
+
+        hypothesis, predictions = predict(X_CV, theta_params)
+        accuracy_CV = getAccuracy(predictions, Y_CV)
+
+        if accuracy_CV >= 0.85:
+            break
+        print "N->Cross Validation accuracy = ", accuracy_CV
+
+        max_theta_params.append(theta_params)
+        max_accuracy.append(accuracy_CV)
+
+        run_id += 1
+
+    if run_id == max_run:
+        accuracy_CV = max(max_accuracy)
+        accuracy_id = max_accuracy.index(accuracy_CV)
+        theta_params = max_theta_params[accuracy_id]
+
+    print "Cross Validation accuracy = ", accuracy_CV
     X1, ref_ids, features1 = read_csv_file("y.csv")#("test_equal_freq.csv")
 
     X1 = np.array(X1)
