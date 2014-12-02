@@ -21,8 +21,8 @@ numerical_cols = ['VehOdo',  'VehicleAge', 'VehBCost', 'WarrantyCost',
                   'ProfitAcquisitionAverage', 'ProfitAcquisitionClean', 'ProfitCurrentAverage', 'ProfitCurrentClean', 'AverageProfit', 'CleanProfit', 'OdoPAge']
 
 logistic_fx = lambda x: 1.0 / (1.0 + math.e**(-1 * x))
-learning_rate = 0.02
-max_iter = 200
+learning_rate = 0.015
+max_iter = 250
 
 def readFile(file_name):
     f = open(file_name, 'r')
@@ -77,9 +77,17 @@ def costFunction(theta, X, Y):
 
     return Jtheta, gradient
 
-def normalize_data(X):
+def normalize_data(X, features):
     M, N = np.shape(X)
     for j in range(1, N):
+        # match = False
+        # for ftr in numerical_cols:
+        #     if features[j-1].startswith(ftr):
+        #         match = True
+        # if not match:
+        #     continue
+        # if features[j-1] not in numerical_cols:
+        #     continue
         mean = np.mean(X[:, j])
         #mm = np.max(X[:, j]) - np.min(X[:, j])
         mm = np.std(X[:, j])
@@ -87,12 +95,12 @@ def normalize_data(X):
 
     return X
 
-def preprocess(X):
+def preprocess(X, features):
     M, N = np.shape(X)
 
 
     X = np.append(np.ones([M, 1]), X, 1)
-    X = normalize_data(X)
+    X = normalize_data(X, features)
 
     return X
 
@@ -139,7 +147,7 @@ def logistic_regression(X, Y, features):
     #theta_param = np.array([[0.49334852], [0.44310159],  [0.62672332],  [0.42342171],  [0.54510326]]) #0.04775 # 0.02 # 100 #normalization on
     print "Theta = ", theta_param
 
-    X = preprocess(X)
+    X = preprocess(X, features)
 
     cost, grad = costFunction(theta_param, X, Y)
     print cost
@@ -247,7 +255,7 @@ if __name__ == "__main__":
     Y_CV = Y[num_training:]
 
     X_CV = np.array(X_CV)
-    X_CV = preprocess(X_CV)
+    X_CV = preprocess(X_CV, features)
     Y_CV = np.matrix(Y_CV).T
 
     accuracy_CV = 0.0
@@ -282,7 +290,7 @@ if __name__ == "__main__":
 
     X1 = np.array(X1)
 
-    X1 = preprocess(X1)
+    X1 = preprocess(X1, features1)
     hypothesis, predictions = predict(X1, theta_params)
 
     output = []
